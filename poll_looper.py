@@ -28,19 +28,19 @@
 # class PollLooper
 #   methods:
 #     __init__
-#     poll_add
-#     poll_start
-#     poll_wait
-#     running
-#     shutdown
-#     seconds_to_ms
-#     minutes_to_ms
-#     hours_to_ms
-#     get_current_time_ms
-#     allow_timeout
-#     message_set
-#     message_get
-#     message_get_entry
+#     poll_add - Add plugin to poll loop
+#     poll_start - Start polling loop
+#     poll_wait - Sleep between poll loops
+#     running - Returns True if poll is running
+#     shutdown - Sets running status to False
+#     seconds_to_ms - Computes seconds to milliseconds
+#     minutes_to_ms - Computes minutes to milliseconds
+#     hours_to_ms - Computes hours to milliseconds
+#     get_current_time_ms - Returns current millisecond counter
+#     allow_timeout - Ignore (no error) poll timeout
+#     message_set - Set global data
+#     message_get - Get global data
+#     message_get_entry - Get global dictionary entry
 #
 ################################################################################
 #
@@ -72,7 +72,7 @@ import gc
 class PollLooper :
     
     def __init__(self,
-                 poll_ms = 100) :         # default poll interval: 0.1 sec
+                 poll_ms = 100) :        # default poll interval: 0.1 sec
         #print ("Globals: init")
         self.current_time_ms = time.ticks_ms ()
         self.poll_interval_ms = poll_ms
@@ -106,7 +106,6 @@ class PollLooper :
             print ("Poll completed")
             for plugin in self.plugin_array :
                 try :
-                #if true :
                     plugin.shutdown ()
                 except :
                     print ("plugin shutdown", plugin.__class__, "exception")
@@ -173,6 +172,11 @@ class PollLooper :
         if not mess_id in self.message_data :
             self.message_data[mess_id] = {}
         return self.message_data[mess_id]
+    def message_set_entry (self, mess_id, entry_id, entry_value) :
+        if not mess_id in self.message_data :       # new
+            self.message_data[mess_id] = {}
+        self.message_data[mess_id][entry_id] = entry_value
+        self.message_data[mess_id]["last_update_ms"] = self.current_time_ms
     def message_get_entry (self, mess_id, entry_id) :
         if not mess_id in self.message_data :
             return None
