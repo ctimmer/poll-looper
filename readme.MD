@@ -64,4 +64,25 @@ class PlugInTemplate:
 - shutdown, called when the polling has been stopped
 
 ### PollLooper Methods
+- Poll handling
+  - poll_add() - Add plugin to poll loop
+  - poll_start() - Start polling loop
+  - poll_wait() - Sleep between poll loops
+    - Normally only called internally
+  - running() - Returns True if poll is running
+  - shutdown() - Sets running status to False
+- Poll timer handling
+  - seconds_to_ms() - Computes seconds to milliseconds
+  - minutes_to_ms() - Computes minutes to milliseconds
+  - hours_to_ms() - Computes hours to milliseconds
+  - get_current_time_ms() - Returns current millisecond counter
+  - allow_timeout() - Ignore (no error) poll timeout
+- Plugin to plugin communication handling
+  - message_set() - Set global data
+  - message_get() - Get global data
+  - message_set_entry() - Set global dictionary entry
+  - message_get_entry() - Get global dictionary entry
 
+
+### Notes:
+- This module was written for micropython, it will run on python3
