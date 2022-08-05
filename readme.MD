@@ -1,7 +1,7 @@
 # poll-looper
 ## micropython module for managing multiple I/O plugins
 
-### Components
+### __Components__
 #### PollLooper Module
 ```
 from poll_looper import PollLooper
@@ -18,6 +18,7 @@ my_poller.poll_add (my_input_plugin)
 my_poller.poll_add (my_output_plugin)
 my_poller.start ()
 ```
+##### __Description__
 - If the optional POLL_INTERVAL parameter the default value is 100ms
 - Plugins will be polled in the same order they are entered
   - Usually plugins that read input would be added first
@@ -26,6 +27,29 @@ my_poller.start ()
 - The 'start' method initiates the polling loop
   - Polling can be interrupted by the operator
   - Polling can be terminated with the PollLooper 'shutdown' method
+##### __Methods__
+- \_\_init\_\_
+  - saves poll_interval
+- Poll handling
+  - poll_add (\<Plugin Object\>) - Add plugin to poll loop
+  - poll_start () - Start polling loop
+  - poll_wait () - Sleep between poll loops
+    - Normally only called internally
+  - running () - Returns True if poll is running
+  - shutdown () - Sets running status to False
+- Poll timer handling
+  - seconds_to_ms(\<seconds\>) - Computes seconds to milliseconds
+  - minutes_to_ms(\<minutes\>) - Computes minutes to milliseconds
+  - hours_to_ms(\<hours\>) - Computes hours to milliseconds
+  - get_current_time_ms() - Returns current millisecond counter
+  - allow_timeout() - Ignore (no error) poll timeout
+- Plugin to plugin communication handling
+  - message_set(\<dict ID\>, {\<dict values\>}) - Set global data
+  - message_get(\<dict ID\>) - Get global data
+  - message_set_entry(\<dict ID\>, \<ent ID\>, \<val\>) - Set global dictionary entry
+  - message_get_entry(\<dict ID\>) - Get global dictionary entry
+##### __Notes:__
+- This module was written for micropython, it will run with python3
 
 #### PollLooper Plugins
 ```
@@ -54,7 +78,13 @@ class PlugInTemplate:
 
 # end PlugInTemplate #
 ```
-- init
+##### __Description__
+- Do whatever action is required when active
+  - Read/write GPIO pins
+  - Test for network input
+  - Shut down PollLooper
+##### __Methods__
+- \_\_init\_\_
   - There are no required parameters for plugins
   - The PollLooper instance is passed in to take advantage of it's utility methods
 - poll_it, the only required plugin method
@@ -62,27 +92,5 @@ class PlugInTemplate:
   - 'active_now' returns True if enough ms have passed since the last time the plugin was active
   - 'active_next_ms' sets the time when the plugin will next be active
 - shutdown, called when the polling has been stopped
-
-### PollLooper Methods
-- Poll handling
-  - poll_add() - Add plugin to poll loop
-  - poll_start() - Start polling loop
-  - poll_wait() - Sleep between poll loops
-    - Normally only called internally
-  - running() - Returns True if poll is running
-  - shutdown() - Sets running status to False
-- Poll timer handling
-  - seconds_to_ms() - Computes seconds to milliseconds
-  - minutes_to_ms() - Computes minutes to milliseconds
-  - hours_to_ms() - Computes hours to milliseconds
-  - get_current_time_ms() - Returns current millisecond counter
-  - allow_timeout() - Ignore (no error) poll timeout
-- Plugin to plugin communication handling
-  - message_set() - Set global data
-  - message_get() - Get global data
-  - message_set_entry() - Set global dictionary entry
-  - message_get_entry() - Get global dictionary entry
-
-
-### Notes:
-- This module was written for micropython, it will run on python3
+##### __Notes__
+- A plugin should never block unless it sets the poll interval
