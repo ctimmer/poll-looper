@@ -1,32 +1,51 @@
 # poll-looper
 ## micropython module for managing multiple I/O plugins
 
+### __About__
+
+After developing a couple of micropython applications utilizing convoluted IO loops with complicated sleep logic I thought there must be a more organized and modular way to handle this. PollLooper allows you to modularize IO interfaces with plugins that are polled at a specified interval.
+
 ### __Components__
 #### PollLooper Module
 ```
 from poll_looper import PollLooper
-# def's for InputPlugin and OutputPlugin (see Plugins)
+
+class InputPlugin :
+    def __init__ (poller) :
+        pass
+    def poll_it (self) :
+        pass
+    def shutdown (self) :
+        pass
+class OutputPlugin :
+    def __init__ (poller) :
+        pass
+    def poll_it (self) :
+        pass
+    def shutdown (self) :
+        pass
 
 POLL_INTERVAL = 200
 
 my_poller = PollLooper (POLL_INTERVAL)
 
-my_input_plugin InputPlugin (my_poller)
-my_output_plugin OutputPlugin (my_poller)
+my_input_plugin = InputPlugin (my_poller)
 
 my_poller.poll_add (my_input_plugin)
-my_poller.poll_add (my_output_plugin)
+my_poller.poll_add (OutputPlugin (my_poller))
 my_poller.start ()
 ```
 ##### __Description__
-- If the optional POLL_INTERVAL parameter the default value is 100ms
+- If the POLL_INTERVAL parameter is omitted the default value is 100ms
+  - The sleep time between polls is determined by the amount of time is used by the previous poll (poll_interval - poll_time).
+  - If the poll time is greater than the poll interval the next poll loop is initiated immediately.
 - Plugins will be polled in the same order they are entered
   - Usually plugins that read input would be added first
   - Plugins that react to input changes would be added next
   - Plugins that operate independently can be added anywhere
 - The 'start' method initiates the polling loop
   - Polling can be interrupted by the operator
-  - Polling can be terminated with the PollLooper 'shutdown' method
+  - Polling can be terminated by calling PollLooper 'shutdown' method
 ##### __Methods__
 - \_\_init\_\_
   - saves poll_interval
