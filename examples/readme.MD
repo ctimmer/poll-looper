@@ -13,9 +13,10 @@
   - ShutdownTimer (pi_shutdown_timer.py)
     - Shuts down PollLooper after set time
   - Watchdog (pi_watchdog.py)
-    - \_\_init\_\_ initializes WDT
-    - poll_it feeds WDT
+    - `__init__` initializes WDT
+    - `poll_it` feeds WDT
 - Sample output:
+
 ```
 $ python3 example.py
 <class 'pi_ledblink.LEDBlink'> init
@@ -68,37 +69,40 @@ That's all folks
 ```
 
 ### __trafficlights.py__
+
 - Controls RED/GREEN/YELLOW traffic lights and walk/dontwalk display
 - Plugins
-  - TL_Controller
-    - Sets light sequence: RED->GREEN->YELLOW
+  - `TL_Controller`
+    - Sets light sequence: RED->GRN->YEL
     - Sets WALK
-      - RED/YELLOW: "Dont Walk"
-      - GREEN:
-        - Walk until \<= 8 seconds, then countdown
+      - "RED"/"YEL": "DW"
+      - "GRN":
+        - "WK" until \<= 8 seconds, then adds countdown
         - If crossing_request is True and countdown > 8, set countdown to 8
-  - crossing_request
+  - `crossing_request`
     - Sets crossing_request boolean
-  - TL_View
+  - `TL_View`
     - Displays lights/walk state when there is a change
 - Sample output:
+
 ```
 $ python3 trafficlights.py
-red Dont Walk
-green      Walk
-green 8
-green 7
-green 6
-green 5
-green 4
-green 3
-green 2
-green 1
-green 0
-yellow Dont Walk
-red Dont Walk
-green      Walk
-green 8
-green 7
-green 6
+RED DW
+GRN WK
+GRN DW 08
+GRN DW 07
+GRN DW 06
+GRN DW 05
+GRN DW 04
+GRN DW 03
+GRN DW 02
+GRN DW 01
+GRN DW 00
+YEL DW
+RED DW
+GRN WK
+GRN DW 08
+GRN DW 07
+GRN DW 06
+GRN DW 05
 ```

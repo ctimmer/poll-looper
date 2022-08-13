@@ -56,11 +56,11 @@ class TL_Controller :
         self.dont_walk_start_seconds = dont_walk_start_seconds
         self.second_counter = 0
         poller.message_set ("state" ,
-                            {"light_on" : "red" ,
-                            "walk_display" : "Dont Walk" ,
+                            {"light_on" : "RED" ,
+                            "walk_display" : "DW" ,
                             "crossing_request" : False})
         self.state = poller.message_get ("state")
-        self.next_light_on = "red"
+        self.next_light_on = "RED"
 
     def poll_it (self) :
         #print (__class__, "poll_it")
@@ -70,37 +70,37 @@ class TL_Controller :
             = self.poller.active_next_ms (self.active_interval_ms)
         #print (__class__, "poll_it: active")           # every second
         self.state ["light_on"] = self.next_light_on
-        if self.state ["light_on"] == "red" :           # "red" state
+        if self.state ["light_on"] == "RED" :           # "red" state
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.red_on_seconds
-                self.state ["walk_display"] = "Dont Walk"
+                self.state ["walk_display"] = "DW"
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
-                    self.next_light_on = "green"        # switch
-        elif self.state ["light_on"] == "green" :       # "green" state
+                    self.next_light_on = "GRN"          # switch
+        elif self.state ["light_on"] == "GRN" :         # "green" state
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.green_on_seconds
-                self.state ["walk_display"] = "     Walk"
+                self.state ["walk_display"] = "WK"
                 self.state ["crossing_request"] = False
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
-                    self.next_light_on = "yellow"       # switch
+                    self.next_light_on = "YEL"          # switch
                 elif self.state ["crossing_request"] :
                     if self.second_counter > self.dont_walk_start_seconds :
                         self.second_counter = self.dont_walk_start_seconds
                 if self.second_counter <= self.dont_walk_start_seconds :
-                    #self.state ["walk_display"] = "Dont Walk"
-                    self.state ["walk_display"] = str (self.second_counter)
-        elif self.state ["light_on"] == "yellow" :      # "yellow" state
+                    #self.state ["walk_display"] = "DW"
+                    self.state ["walk_display"] = "DW {secs:02}".format (secs=self.second_counter)
+        elif self.state ["light_on"] == "YEL" :         # "yellow" state
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.yellow_on_seconds
-                self.state ["walk_display"] = "Dont Walk"
+                self.state ["walk_display"] = "DW"
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
-                    self.next_light_on = "red"          # switch
+                    self.next_light_on = "RED"          # switch
         else :
             print ("light_on:", self.state ["light_on"])
 
@@ -166,7 +166,7 @@ class TL_View :
             self.previous_display = self.display
 
     def shutdown (self) :
-        self.state["light_on"] = "red"
+        self.state["light_on"] = "RED"
         self.state["walk_display"] = "shutdown"
         self.poll_it ()
 

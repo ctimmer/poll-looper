@@ -42,7 +42,7 @@ my_poller.start ()
 
 - If the POLL_INTERVAL parameter is omitted the default value is 100ms
   - The sleep time between polls is determined by the amount of time is used by the previous poll (poll_interval - poll_time).
-  - If the poll time is greater than the poll interval the next poll loop is initiated immediately.
+  - If the poll time is greater than the poll interval the next poll cycle is initiated immediately.
 - Plugins will be polled in the same order they are entered
   - Usually plugins that read input would be added first
   - Plugins that react to input changes would be added next
@@ -131,17 +131,19 @@ class PlugInTemplate:
 - Do whatever action is required when active
   - Read/write GPIO pins
   - Test for network input
+  - Send network output
+  - Feed the WDT timer
   - Shut down PollLooper
 
 ##### __Methods__
 - `__init__ ()`
-  - There are no required parameters for plugins
+  - There are no required parameters for plugins.
   - The PollLooper object is usually passed to take advantage of it's utility methods
-- `poll_it ()`
-  - The only required plugin method
-  - Called on every poll cycle
-  - Calls `active_now` and `active_next_ms` to determine if this plugin is active and set the next active ms
-  - This method should never block unless it is used for the poll interval
+- `poll_it ()`.
+  - The only required plugin method.
+  - Called on every poll cycle.
+  - Plugins that want to activate at longer intervals than the poll cycle can use `active_now` and `active_next_ms` to determine if this plugin is active and set the next active ms.
+  - This method should never block unless it is used to control the poll interval.
 - `shutdown ()` called when the polling has been stopped. This could be used by an oven controller to set the power level to zero.
 
 ### __References:__
