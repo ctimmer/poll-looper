@@ -24,8 +24,14 @@
 ################################################################################
 #
 
+from machine import Pin
 import sys
 MICRO_PYTHON = sys.implementation.name == "micropython"
+
+CROSSWALK_PIN = None
+#CROSSWALK_PIN = 35               # Button pin
+
+POLL_INTERVAL_MS = 100            # milliseconds
 
 #---- Example module:
 from poll_looper import PollLooper
@@ -38,6 +44,7 @@ from poll_looper import PollLooper
 #     If the second_counter > dont_walk_start_seconds
 #       set the second_counter to dont_walk_start_seconds
 #-------------------------------------------------------------------------------
+
 class TL_Controller :
 
     def __init__ (self ,
@@ -134,7 +141,9 @@ class TL_CrossingRequest :
             self.button_pushed = False
         #---- This would normally be used to test an input pin
 
-    def crossing_request (self) :           # Called by interrupt handler
+    def crossing_request (self ,
+                          pin = None) :     # Called by interrupt handler
+        #print (__class__, "crossing_request")
         self.button_pushed = True
 
     def shutdown (self) :
@@ -172,15 +181,17 @@ class TL_View :
 
 # end TL_View
 
-POLL_INTERVAL = 100            # milliseconds
-
 #-------------------------------------------------------------------------------
 # main
 #-------------------------------------------------------------------------------
 
-poller = PollLooper (POLL_INTERVAL)
+poller = PollLooper (POLL_INTERVAL_MS)
 
 crossing_request = TL_CrossingRequest (poller)
+if CROSSWALK_PIN != None :
+    crosswalk_ir = Pin (CROSSWALK_PIN, Pin.IN)
+    crosswalk_ir.irq (trigger = Pin.IRQ_RISING ,
+                      handler = crossing_request.crossing_request)
 
 poller.poll_add (TL_Controller (poller))
 poller.poll_add (crossing_request)
