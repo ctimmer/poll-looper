@@ -35,7 +35,7 @@ my_input_plugin = InputPlugin (my_poller)
 
 my_poller.poll_add (my_input_plugin)
 my_poller.poll_add (OutputPlugin (my_poller))
-my_poller.start ()
+my_poller.poll_start ()
 ```
 
 ##### __Description__
@@ -43,13 +43,15 @@ my_poller.start ()
 - If the POLL_INTERVAL parameter is omitted the default value is 100ms
   - The sleep time between polls is determined by the amount of time is used by the previous poll (poll_interval - poll_time).
   - If the poll time is greater than the poll interval the next poll cycle is initiated immediately.
+- An additional parameter 'use_asyncio' allows poll_looper to be run from a task.
+See the trafficlight.py example.
 - Plugins will be polled in the same order they are entered
   - Usually plugins that read input would be added first
   - Plugins that react to input changes would be added next
   - Plugins that operate independently can be added anywhere
-- The 'start' method initiates the polling loop
+- The `poll_start` method initiates the polling loop
   - Polling can be interrupted by the operator
-  - Polling can be terminated by calling PollLooper 'shutdown' method
+  - Polling can be terminated by calling PollLooper `shutdown` method
 
 ##### __Class Variables__
 
@@ -76,7 +78,10 @@ my_poller.start ()
 - Poll handling
   - `poll_add (PluginObject)` - Adds plugin to poll loop
   - `poll_start ()` Start polling loop
+     - Calls `poll_wait` and `poll_plugins`
   - `poll_wait ()` Sleep between poll loops
+    - Normally only called internally
+  - `poll_plugins ()` Poll all the plugins
     - Normally only called internally
   - `running ()` Returns True if poll is running
   - `shutdown ()` Sets running status to False

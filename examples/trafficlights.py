@@ -24,14 +24,22 @@
 ################################################################################
 #
 
-from machine import Pin
+try:
+    from machine import Pin, freq
+except:
+    def freq (f="default") :
+        return f
+
 import sys
 MICRO_PYTHON = sys.implementation.name == "micropython"
+
+MACHINE_FREQ = 240000000         # Ignored if <= 0
 
 CROSSWALK_PIN = None
 #CROSSWALK_PIN = 35               # Button pin
 
 POLL_INTERVAL_MS = 100            # milliseconds
+USE_ASYNCIO = False
 
 #---- Example module:
 from poll_looper import PollLooper
@@ -62,12 +70,19 @@ class TL_Controller :
         self.yellow_on_seconds = yellow_on_seconds
         self.dont_walk_start_seconds = dont_walk_start_seconds
         self.second_counter = 0
+        self.display = poller.message_set ("display" ,
+                                            {"red" : "RED" ,
+                                             "green" : "GRN" ,
+                                             "yellow" : "YEL" ,
+                                             "walk" : "WK" ,
+                                             "dontwalk" : "DW"
+                                             })
         poller.message_set ("state" ,
-                            {"light_on" : "RED" ,
-                            "walk_display" : "DW" ,
+                            {"light_on" : self.display ["red"] ,
+                            "walk_display" : self.display ["dontwalk"] ,
                             "crossing_request" : False})
         self.state = poller.message_get ("state")
-        self.next_light_on = "RED"
+        self.next_light_on = self.display ["red"]
 
     def poll_it (self) :
         #print (__class__, "poll_it")
@@ -77,37 +92,39 @@ class TL_Controller :
             = self.poller.active_next_ms (self.active_interval_ms)
         #print (__class__, "poll_it: active")           # every second
         self.state ["light_on"] = self.next_light_on
-        if self.state ["light_on"] == "RED" :           # "red" state
+        if self.state ["light_on"] == self.display["red"] : # "red" state
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.red_on_seconds
-                self.state ["walk_display"] = "DW"
+                self.state ["walk_display"] = self.display["dontwalk"]
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
-                    self.next_light_on = "GRN"          # switch
-        elif self.state ["light_on"] == "GRN" :         # "green" state
+                    self.next_light_on = self.display["green"] # switch
+        elif self.state ["light_on"] == self.display["green"] : # "green" state
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.green_on_seconds
-                self.state ["walk_display"] = "WK"
+                self.state ["walk_display"] = self.display["walk"]
                 self.state ["crossing_request"] = False
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
-                    self.next_light_on = "YEL"          # switch
+                    self.next_light_on = self.display["yellow"] # switch
                 elif self.state ["crossing_request"] :
                     if self.second_counter > self.dont_walk_start_seconds :
                         self.second_counter = self.dont_walk_start_seconds
                 if self.second_counter <= self.dont_walk_start_seconds :
-                    #self.state ["walk_display"] = "DW"
-                    self.state ["walk_display"] = "DW {secs:02}".format (secs=self.second_counter)
-        elif self.state ["light_on"] == "YEL" :         # "yellow" state
+                    #self.state ["walk_display"] = self.display["dontwalk"]
+                    self.state ["walk_display"] \
+                        = "{wk} {secs:02}".format (wk=self.display["dontwalk"],
+                                                    secs=self.second_counter)
+        elif self.state ["light_on"] == self.display["yellow"] : # "yellow" state
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.yellow_on_seconds
-                self.state ["walk_display"] = "DW"
+                self.state ["walk_display"] = self.display["dontwalk"]
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
-                    self.next_light_on = "RED"          # switch
+                    self.next_light_on = self.display["red"]  # switch
         else :
             print ("light_on:", self.state ["light_on"])
 
@@ -163,19 +180,20 @@ class TL_View :
                 ) :
         self.poller = poller
         self.state = poller.message_get ("state")
+        self.display = poller.message_get ("display")
         self.previous_display = ""
-        self.display = ""
+        self.current_display = ""
 
     def poll_it (self) :
         #print (__class__, "poll_it")
-        self.display = self.state["light_on"] \
+        self.current_display = self.state["light_on"] \
                         + " " + self.state["walk_display"]
-        if self.display != self.previous_display :
-            print (self.display)
-            self.previous_display = self.display
+        if self.current_display != self.previous_display :
+            print (self.current_display)
+            self.previous_display = self.current_display
 
     def shutdown (self) :
-        self.state["light_on"] = "RED"
+        self.state["light_on"] = self.display["red"]
         self.state["walk_display"] = "shutdown"
         self.poll_it ()
 
@@ -185,16 +203,39 @@ class TL_View :
 # main
 #-------------------------------------------------------------------------------
 
-poller = PollLooper (POLL_INTERVAL_MS)
+if MACHINE_FREQ > 0 :
+    freq (MACHINE_FREQ)
+    print ("machine.freq:", freq())
+
+poller = PollLooper (POLL_INTERVAL_MS,
+                     use_asyncio = USE_ASYNCIO)
 
 crossing_request = TL_CrossingRequest (poller)
-if CROSSWALK_PIN != None :
-    crosswalk_ir = Pin (CROSSWALK_PIN, Pin.IN)
-    crosswalk_ir.irq (trigger = Pin.IRQ_RISING ,
-                      handler = crossing_request.crossing_request)
 
 poller.poll_add (TL_Controller (poller))
 poller.poll_add (crossing_request)
 poller.poll_add (TL_View (poller))
 
-poller.poll_start ()
+if CROSSWALK_PIN != None :
+    crosswalk_ir = Pin (CROSSWALK_PIN, Pin.IN)
+    crosswalk_ir.irq (trigger = Pin.IRQ_RISING ,
+                      handler = crossing_request.crossing_request)
+        
+if USE_ASYNCIO :
+    import uasyncio as asyncio
+    async def poll_plugins () :
+        while True :
+            #print ("poll_plugins: entry:")
+            sleep_ms = poller.poll_wait ()
+            #---- poll_wait returns ms to wait for next poll cycle
+            await asyncio.sleep_ms (sleep_ms)
+            #---- polls plugins added to poll-looper
+            poller.poll_plugins ()
+    async def main() :
+        asyncio.create_task (poll_plugins())
+        #---- Create additional tasks here
+        while True:
+            await asyncio.sleep(1)
+    asyncio.run (main ())           # start the traffic lights
+else :
+    poller.poll_start ()            # normal startup

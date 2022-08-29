@@ -64,6 +64,11 @@ except :
     time.ticks_diff = MethodType (ticks_diff, time)
     time.sleep_ms = MethodType (sleep_ms, time)
 
+try :
+    import uasyncio as asyncio
+except :
+    pass
+
 import gc
 
 #---------------------------------------------------------------------------
@@ -72,9 +77,11 @@ import gc
 class PollLooper :
     
     def __init__(self,
-                 poll_ms = 100) :        # default poll interval: 0.1 sec
+                 poll_ms = 100 ,         # default poll interval: 0.1 sec
+                 use_asyncio = False) :
         #print ("Globals: init")
         self.current_time_ms = time.ticks_ms ()
+        self.use_asyncio = use_asyncio
         self.poll_interval_ms = poll_ms
         self.poll_time_ms = time.ticks_ms () # Current poll time
         self.poll_time_next_ms = 0      # Next poll time
@@ -96,8 +103,7 @@ class PollLooper :
         try :
         #if True :
             while self.states['running'] :
-                for plugin in self.plugin_array :     # poll each plugin
-                    plugin.poll_it ()
+                self.poll_plugins ()
                 self.poll_wait ()       # wait for next poll cycle
         except Exception as e :
             print ("poll_it: exception")
@@ -113,17 +119,19 @@ class PollLooper :
 
     def poll_wait (self) :
         #print ("Globals: ======> poll_wait:", time.time())
+        sleep_time_ms = 0
         if not self.states['running'] :
             return                  # shutting down
         self.current_time_ms = time.ticks_ms ()
         if self.poll_interval_ms <= 0 :
             self.poll_time_ms = self.current_time_ms
-            return                  # poll delay controlled externally
+            return sleep_time_ms    # poll delay controlled externally
         #---- Set poll delay
         if time.ticks_diff (self.poll_time_next_ms, self.current_time_ms) <= 0 :
             if self.show_timeout :
-                print ("Poll loop too much time")
-                print (self.poll_time_next_ms, self.current_time_ms)
+                print ("poll_wait: too much time: Next" ,
+                        self.poll_time_next_ms ,
+                        "Curr:", self.current_time_ms)
             else :
                 self.show_timeout = True
             self.poll_time_ms = self.current_time_ms
@@ -133,10 +141,18 @@ class PollLooper :
                                             self.current_time_ms)
             if sleep_time_ms < 0 :
                 sleep_time_ms = 0
-            time.sleep_ms (sleep_time_ms)
+            if not self.use_asyncio :
+                time.sleep_ms (sleep_time_ms)
             self.poll_time_ms = self.poll_time_next_ms
         self.poll_time_next_ms = time.ticks_add (self.poll_time_ms,
                                                 self.poll_interval_ms)
+        #print ("ptn:",self.poll_time_next_ms,"pt:",self.poll_time_ms)
+        #print ("sleep_ms:", sleep_time_ms)
+        return sleep_time_ms
+    def poll_plugins (self) :
+        #print (__class__)
+        for plugin in self.plugin_array :     # poll each plugin
+            plugin.poll_it ()
 
     def running (self) :
         return self.states['running']
