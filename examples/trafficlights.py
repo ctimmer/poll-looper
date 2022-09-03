@@ -222,10 +222,10 @@ if USE_ASYNCIO :
     import uasyncio as asyncio
     from primitives import Pushbutton
     async def poll_plugins () :
+        gc.collect ()
         poller.poll_init ()        # Reset poll start time
         while poller.running () :
             #print ("poll_plugins: entry:")
-            gc.collect ()
             #---- polls plugins added to poll-looper
             poller.poll_plugins ()
             #---- get wait time
