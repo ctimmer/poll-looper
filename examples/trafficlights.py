@@ -33,15 +33,15 @@ except:
 import sys
 MICRO_PYTHON = sys.implementation.name == "micropython"
 
-MACHINE_FREQ = 240000000         # Ignored if <= 0
-
+MACHINE_FREQ = 0                 # Ignored if <= 0
+#MACHINE_FREQ = 240000000         # ESP32
 CROSSWALK_PIN = None
 #CROSSWALK_PIN = 35               # Button pin
-
-POLL_INTERVAL_MS = 100            # milliseconds
 USE_ASYNCIO = False
+#USE_ASYNCIO = True              # See readme
 
 #---- Example module:
+POLL_INTERVAL_MS = 100            # milliseconds
 from poll_looper import PollLooper
 
 #---- Example plugins:
@@ -104,11 +104,11 @@ class TL_Controller :
             if self.second_counter <= 0 :               # First cycle
                 self.second_counter = self.green_on_seconds
                 self.state ["walk_display"] = self.display["walk"]
-                self.state ["crossing_request"] = False
             else :
                 self.second_counter -= 1
                 if self.second_counter < 1 :
                     self.next_light_on = self.display["yellow"] # switch
+                    self.state ["crossing_request"] = False
                 elif self.state ["crossing_request"] :
                     if self.second_counter > self.dont_walk_start_seconds :
                         self.second_counter = self.dont_walk_start_seconds
@@ -129,6 +129,7 @@ class TL_Controller :
             print ("light_on:", self.state ["light_on"])
 
     def crossing_request (self) :           # Called by interrupt handler
+        #print (__class__, "crossing_request")
         self.state ["crossing_request"] = True
 
     def shutdown (self) :
@@ -210,32 +211,41 @@ if MACHINE_FREQ > 0 :
 poller = PollLooper (POLL_INTERVAL_MS,
                      use_asyncio = USE_ASYNCIO)
 
+tl_controller = TL_Controller (poller)
 crossing_request = TL_CrossingRequest (poller)
 
-poller.poll_add (TL_Controller (poller))
+poller.poll_add (tl_controller)
 poller.poll_add (crossing_request)
 poller.poll_add (TL_View (poller))
 
-if CROSSWALK_PIN != None :
-    crosswalk_ir = Pin (CROSSWALK_PIN, Pin.IN)
-    crosswalk_ir.irq (trigger = Pin.IRQ_RISING ,
-                      handler = crossing_request.crossing_request)
-        
 if USE_ASYNCIO :
     import uasyncio as asyncio
+    from primitives import Pushbutton
     async def poll_plugins () :
-        while True :
+        poller.poll_init ()        # Reset poll start time
+        while poller.running () :
             #print ("poll_plugins: entry:")
+            gc.collect ()
+            #---- polls plugins added to poll-looper
+            poller.poll_plugins ()
+            #---- get wait time
             sleep_ms = poller.poll_wait ()
             #---- poll_wait returns ms to wait for next poll cycle
             await asyncio.sleep_ms (sleep_ms)
-            #---- polls plugins added to poll-looper
-            poller.poll_plugins ()
+        print ("poller: exit")
     async def main() :
-        asyncio.create_task (poll_plugins())
+        asyncio.create_task (poll_plugins ())
+        if CROSSWALK_PIN != None :
+            crosswalk_pin = Pin (CROSSWALK_PIN, Pin.IN, Pin.PULL_UP)
+            crosswalk_button = Pushbutton (crosswalk_pin)
+            crosswalk_button.press_func (tl_controller.crossing_request, ()) 
         #---- Create additional tasks here
         while True:
             await asyncio.sleep(1)
     asyncio.run (main ())           # start the traffic lights
 else :
+    if CROSSWALK_PIN != None :
+        crosswalk_pin = Pin (CROSSWALK_PIN, Pin.IN)
+        crosswalk_pin.irq (trigger = Pin.IRQ_RISING ,
+                          handler = crossing_request.crossing_request)
     poller.poll_start ()            # normal startup

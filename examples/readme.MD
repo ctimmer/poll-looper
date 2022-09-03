@@ -83,6 +83,17 @@ That's all folks
     - Sets crossing_request boolean
   - `TL_View`
     - Displays lights/walk state when there is a change
+- Options:
+  - MACHINE_FREQ
+    - If > zero sets the device CPU clock speed if your device supports it
+  - CROSSWALK_PIN
+    - If set to GPIO pin button enables a crosswalk request when the pin button is pressed
+    - Modes:
+      - USE_ASYNCIO is False: Uses interrupt handler to call crossing_request in crossing_request plugin.
+      - USE_ASYNCIO is True: Uses asyncio Pushbutton (including debounce) to call crossing_request in the TL_Controller instance.
+  - USE_ASYNCIO
+    - Enables the TL_Controller to run as a task along with any other asynio tasks
+    - This requires the primitives (V3) directory from "https://github.com/peterhinch/micropython-async.git"
 - Sample output:
 
 ```

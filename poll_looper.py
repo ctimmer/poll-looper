@@ -28,6 +28,7 @@
 # class PollLooper
 #   methods:
 #     __init__
+#     poll_init - Initialize poll timing
 #     poll_add - Add plugin to poll loop
 #     poll_start - Start polling loop
 #     poll_wait - Sleep between poll loops
@@ -83,17 +84,21 @@ class PollLooper :
         self.current_time_ms = time.ticks_ms ()
         self.use_asyncio = use_asyncio
         self.poll_interval_ms = poll_ms
-        self.poll_time_ms = time.ticks_ms () # Current poll time
+        self.poll_time_ms = 0
         self.poll_time_next_ms = 0      # Next poll time
-        if self.poll_interval_ms > 0 :
-            self.poll_time_next_ms = time.ticks_add (self.poll_time_ms,
-                                                    self.poll_interval_ms)
+        self.poll_init ()
         self.plugin_array = []          # PlugIn's to be polled
         self.message_data = {}
         self.states = {
             'running' : True
             }
         self.show_timeout = True
+
+    def poll_init (self) :
+        self.poll_time_ms = time.ticks_ms () # Current poll time
+        if self.poll_interval_ms > 0 :
+            self.poll_time_next_ms = time.ticks_add (self.poll_time_ms,
+                                                    self.poll_interval_ms)
 
     def poll_add (self, plugin) :
         self.plugin_array.append (plugin)
